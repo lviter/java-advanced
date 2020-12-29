@@ -202,4 +202,39 @@ Exception in thread "main" org.springframework.cglib.core.CodeGenerationExceptio
 - 方法区溢出也是一种常见的内存溢出异常，一个类要被垃圾收集器回收掉，判定条件是比较苛刻的。在经常动态生成大量Class的应用中，需要特别注意类的回收状况。这类场景除了上面提到的程序使用了CGLib字节码增强和动态语言之外，常见的还有：大量JSP或动态产生JSP文件的应用（JSP第一次运行时需要编译为Java类）、基于OSGi的应用（即使是同一个类文件，被不同的加载器加载也会视为不同的类）等。
 
 ### 本地直接内存溢出
-
+DirectMemory容量可通过-XX：MaxDirectMemorySize指定，如果不指定，则默认与Java堆最大值（-Xmx指定）一样
+- 使用unsafe分配本机内存
+```yaml
+-XX:MaxDirectMemorySize=50M -XX:+PrintGCDetails
+```
+```java
+import sun.misc.Unsafe;
+import java.lang.reflect.Field;
+public class DirectMemoryOOM {
+    private static final int _1MB = 1024 * 1024;
+    public static void main(String[] args) throws Exception {
+        Field unsafeField = Unsafe.class.getDeclaredFields()[0];
+        unsafeField.setAccessible(true);
+        Unsafe unsafe = (Unsafe) unsafeField.get(null);
+        while (true) {
+            unsafe.allocateMemory(_1MB);
+        }
+    }
+}
+```
+运行结果
+```log
+Exception in thread "main" java.lang.OutOfMemoryError
+	at sun.misc.Unsafe.allocateMemory(Native Method)
+	at com.llh.jdk.map.DirectMemoryOOM.main(DirectMemoryOOM.java:15)
+Heap
+ PSYoungGen      total 75264K, used 5161K [0x000000076ca00000, 0x0000000771e00000, 0x00000007c0000000)
+  eden space 64512K, 8% used [0x000000076ca00000,0x000000076cf0a638,0x0000000770900000)
+  from space 10752K, 0% used [0x0000000771380000,0x0000000771380000,0x0000000771e00000)
+  to   space 10752K, 0% used [0x0000000770900000,0x0000000770900000,0x0000000771380000)
+ ParOldGen       total 172032K, used 0K [0x00000006c5e00000, 0x00000006d0600000, 0x000000076ca00000)
+  object space 172032K, 0% used [0x00000006c5e00000,0x00000006c5e00000,0x00000006d0600000)
+ Metaspace       used 3348K, capacity 4496K, committed 4864K, reserved 1056768K
+  class space    used 366K, capacity 388K, committed 512K, reserved 1048576K
+```
+由DirectMemory导致的内存溢出，一个明显的特征是在Heap Dump文件中不会看见明显的异常，如果读者发现OOM之后Dump文件很小，而程序中又直接或间接使用了NIO，那就可以考虑检查一下是不是这方面的原因。
