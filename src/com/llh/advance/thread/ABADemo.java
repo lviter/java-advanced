@@ -1,5 +1,5 @@
-## CAS引发的ABA问题
-```java
+package com.llh.advance.thread;
+
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicStampedReference;
 
@@ -67,6 +67,3 @@ public class ABADemo {
         }, "t4").start();
     }
 }
-
-```
-代码实现如[这里](../../src/com/llh/advance/thread/ABADemo.java)
