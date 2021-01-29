@@ -1,3 +1,9 @@
+## CAS自旋锁
+unsafe类的compareAndSwap()方法,实现比较并交换
+### CAS可能造成的问题
+- 进入死循环，导致cpu占用过高
+- 引发ABA问题
+
 ## CAS引发的ABA问题
 ```java
 import java.util.concurrent.atomic.AtomicReference;
