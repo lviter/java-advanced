@@ -112,3 +112,197 @@ public class RedisConfig {
 }
 
 ```
+
+### 使用redisson实现延迟队列
+由于延时队列持久化在redis中，所以机器宕机数据不会异常丢失，机器重启后，会正常消费队列中积累的任务
+#### redisson实现延迟队列的原理
+使用redis的zset有序性，轮询zset中的每个元素，到点后将内容迁移至待消费的队列
+
+#### 延迟队列配置
+```java
+package com.dadi01.scrm.service.member.provider.config.redisson.delay;
+
+import org.redisson.api.RBlockingQueue;
+import org.redisson.api.RDelayedQueue;
+import org.redisson.api.RedissonClient;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+/**
+ * @author lviter
+ * redisson延迟队列
+ */
+@Configuration
+public class RedissonQueueConfig {
+
+    private final String queueName = "queue";
+
+    @Bean
+    public RBlockingQueue<String> rBlockingQueue(@Qualifier("redissonSingle") RedissonClient redissonClient) {
+        return redissonClient.getBlockingQueue(queueName);
+    }
+
+    @Bean(name = "rDelayedQueue")
+    public RDelayedQueue<String> rDelayedQueue(@Qualifier("redissonSingle") RedissonClient redissonClient,
+                                               @Qualifier("rBlockingQueue") RBlockingQueue<String> blockQueue) {
+        return redissonClient.getDelayedQueue(blockQueue);
+    }
+}
+
+```
+定义队列使用接口
+```java
+package com.dadi01.scrm.service.member.provider.config.redisson.delay;
+
+import java.util.concurrent.TimeUnit;
+
+/**
+ * @author lviter
+ */
+public interface DelayQueue {
+
+    /**
+     * 发布
+     *
+     * @param object
+     * @return
+     */
+    Boolean offer(Object object);
+
+    /**
+     * 带延迟功能的队列
+     *
+     * @param object
+     * @param time
+     * @param timeUnit
+     */
+    void offer(Object object, Long time, TimeUnit timeUnit);
+
+    void offerAsync(Object object, Long time, TimeUnit timeUnit);
+
+    Boolean offerAsync(Object object);
+}
+
+```
+延迟队列实现
+```java
+package com.dadi01.scrm.service.member.provider.config.redisson.delay;
+
+import org.redisson.api.RDelayedQueue;
+import org.redisson.api.RFuture;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
+
+import javax.annotation.Resource;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+
+/**
+ * @author lviter
+ */
+@Component
+public class RedissonDelayQueue implements DelayQueue {
+
+    private static Logger log = LoggerFactory.getLogger(RedissonDelayQueue.class);
+
+    @Resource(name = "rDelayedQueue")
+    private RDelayedQueue<Object> rDelayedQueue;
+
+
+    @Override
+    public Boolean offer(Object object) {
+        return rDelayedQueue.offer(object);
+    }
+
+    @Override
+    public void offer(Object object, Long time, TimeUnit timeUnit) {
+        rDelayedQueue.offer(object, time, timeUnit);
+    }
+
+    @Override
+    public void offerAsync(Object object, Long time, TimeUnit timeUnit) {
+        rDelayedQueue.offerAsync(object, time, timeUnit);
+    }
+
+    @Override
+    public Boolean offerAsync(Object object) {
+        boolean flag = false;
+        RFuture<Boolean> rFuture = rDelayedQueue.offerAsync(object);
+        try {
+            flag = rFuture.get();
+        } catch (InterruptedException | ExecutionException e) {
+            log.info("offerAsync exception:{}", e.getMessage());
+            e.printStackTrace();
+        }
+        return flag;
+    }
+}
+
+```
+启动一个后台监控线程
+```java
+package com.dadi01.scrm.service.member.provider.config.redisson.delay;
+
+import org.redisson.api.RBlockingQueue;
+import org.springframework.stereotype.Component;
+
+import javax.annotation.PostConstruct;
+import javax.annotation.Resource;
+
+/**
+ * @author lviter
+ */
+@Component
+public class RedissonTask {
+    @Resource(name = "rBlockingQueue")
+    private RBlockingQueue<Object> rBlockingQueue;
+
+    @PostConstruct
+    public void take() {
+        new Thread(() -> {
+            while (true) {
+                try {
+                    System.out.println("=========================" + rBlockingQueue.take());
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+    }
+}
+
+```
+使用延迟队列发送
+```java
+package com.dadi01.scrm.service.member.provider.impl;
+
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mybatis.spring.annotation.MapperScan;
+import org.redisson.api.RDelayedQueue;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.junit4.SpringRunner;
+
+import javax.annotation.Resource;
+import java.util.concurrent.TimeUnit;
+
+@RunWith(SpringRunner.class)
+@SpringBootTest
+@ActiveProfiles(value = "llh")
+@MapperScan("com.dadi01.scrm.service.member.provider.mapper")
+public class RDelayQueueTests {
+
+    @Resource(name = "rDelayedQueue")
+    private RDelayedQueue<Object> rDelayedQueue;
+
+    @Test
+    public void offerAsync() {
+
+        rDelayedQueue.offerAsync("llh send message", 20, TimeUnit.SECONDS);
+    }
+}
+
+```
