@@ -118,6 +118,10 @@ public class RedisConfig {
 由于延时队列持久化在redis中，所以机器宕机数据不会异常丢失，机器重启后，会正常消费队列中积累的任务
 #### redisson实现延迟队列的原理
 使用redis的zset有序性，轮询zset中的每个元素，到点后将内容迁移至待消费的队列
+- Redisson延迟队列使用三个结构来存储，一个是queueName的list，值是添加的元素；一个是timeoutSetName的zset，值是添加的元素，score为timeout值；还有一个是getName()的blockingQueue，值是到期的元素。
+- 将元素及延时信息入队，之后定时任务将到期的元素转移到阻塞队列。
+- 使用HashedWheelTimer做定时，定时到期之后从zset中取头部100个到期元素，所以定时和转移到阻塞队列是解耦的，无论是哪个task触发的pushTask，最终都是先取zset的头部先到期的元素。
+- 元素数据都是存在redis服务端的，客户端只是执行HashedWheelTimer任务，所以单个客户端挂了不影响服务端数据，做到分布式的高可用。
 
 #### 延迟队列配置
 ```java
