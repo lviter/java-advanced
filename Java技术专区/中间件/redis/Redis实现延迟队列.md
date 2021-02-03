@@ -114,7 +114,7 @@ public class RedisConfig {
 
 ```
 
-### 使用redisson实现延迟队列
+### 使用redisson实现延迟队列[【wiki】](https://github.com/redisson/redisson/wiki)
 由于延时队列持久化在redis中，所以机器宕机数据不会异常丢失，机器重启后，会正常消费队列中积累的任务
 #### redisson实现延迟队列的原理
 使用redis的zset有序性，轮询zset中的每个元素，到点后将内容迁移至待消费的队列
