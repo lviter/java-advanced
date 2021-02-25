@@ -1,15 +1,23 @@
-## redis有哪些数据结构
+## redis有哪些数据结构（https://www.kancloud.cn/kancloud/redisbook/63832）
 基础的数据结构有String、Hash、List、Set、ZSet五种，还有HyperLogLog、GEO、Pub\Sub
 ### redis对使用者暴露了五种value type,其底层实现的数据结构有8种，分别是：
-1. SDS   -   simple synamic string -支持自动动态扩容的字节数组
-2. list  -   链表
-3. dict  -   使用双哈希表实现，支持平滑扩容的字典
+1. SDS   -   simple synamic string -支持自动动态扩容的字节数组（简单动态字符串--String类型）
+2. list  -   链表（双向链表）
+3. dict  -   使用双哈希表实现，支持平滑扩容的字典（哈希表）
 4. zskiplist -   附加了后向指针的跳表
-5. intset    -  用于存储整数数值集合的自有结构
-6. ziplist  -   实现类似于TLV,但比TLV复杂，用于存储任意数据的有序序列的数据结构
+5. intset    -  用于存储整数数值集合的自有结构（整数数组）
+6. ziplist  -   实现类似于TLV,但比TLV复杂，用于存储任意数据的有序序列的数据结构（压缩列表）
 7. quicklist    -   以ziplist作为结点的双链表结构
 8. zipmap   -   小规模场合使用的轻量级字典结构
+![](static/img/redis002.jpg)
 
+### 键值采用什么结构组织
+使用哈希表来保存所有键值对，其实就是一个数组，数组的每个元素称为一个哈希桶。哈希桶中的元素保存的并不是值本身，而是指向具体值的指针。
+![](static/img/redis003.jpg)
+如图，在哈希桶内，一个entry内存放了*key,*value的键值指针，分别指向了不同数据结构的值。<br/>
+哈希表最大好处是可以使用O(1)的时间复杂度来快速查找到键值对==我们只需要计算键的哈希值，即可找到哈希桶的位置，然后可以访问到entry元素。
+#### 当写入大量数据时，操作可能会变慢，什么原因？
+哈希表冲突和rehash可能带来操作阻塞
 ### string字符串
 字符串类型可以存放--简单的字符串、复杂的字符串（xml、json）、数字（整数、浮点数）、二进制（图片、音频、视频），最大不能超过512M
 - 使用场景
