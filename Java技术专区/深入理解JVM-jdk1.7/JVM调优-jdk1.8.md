@@ -181,3 +181,12 @@ class_loader    classes bytes   parent_loader   alive?  type
 ····
 total = 308     10750   18404333            N/A         alive=1, dead=307           N/A
 ```
+
+### 5. 将内存详细使用情况打印文件
+```shell
+  jmap -dump:format=b,file=m.dat pid
+```
+然后可以使用jhat命令发布到本地5000端口上
+```shell
+jhat -port 5000 m.dat
+```
