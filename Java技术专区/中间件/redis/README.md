@@ -10,3 +10,6 @@
 两大维度、三大主线
 ![](static/img/redis001.jpg)
 
+## redis核心基础篇1-11压缩图片
+![](static/img/Redis核心1-11基础篇.png)
+推荐前往幕布查看原文档：https://www.mubucm.com/doc/1bMEbiZTaGl
