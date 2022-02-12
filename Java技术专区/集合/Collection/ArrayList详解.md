@@ -49,3 +49,8 @@ add 方法第一步操作会去判断是否扩容，size为数组内已有元素
     }
 ```
 将element插入数组内指定index的位置
+
+## 解决arraylist线程安全问题
+在多线程并发场景下，araylist的add操作可能导致：插入null值；少插入值；插入值超过数组长度。解决arraylist并发导致的问题，有以下几个解决方案：[代码](../../../src/com/llh/advance/collection/CopyOnWriteArrayListTest.java)
+1. 使用Collections.synchronizedList()方法，相当于synchronized同步锁，不建议使用，影响性能
+2. 使用[CopyOnWriteArrayList](CopyOnWriteArrayList详解.md)

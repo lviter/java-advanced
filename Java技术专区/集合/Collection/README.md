@@ -23,3 +23,4 @@ java.util包中主要提供了三种类型的集合：
 
 ## 常用集合详解
 - [ArrayList](ArrayList详解.md)
+- [CopyOnWriteArrayList](CopyOnWriteArrayList详解.md)
