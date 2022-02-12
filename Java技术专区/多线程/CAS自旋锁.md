@@ -3,7 +3,9 @@ unsafe类的compareAndSwap()方法,实现比较并交换
 ### CAS可能造成的问题
 - 进入死循环，导致cpu占用过高
 - 引发ABA问题
-
+### 自己实现自旋锁
+尝试获取锁的线程不会立即阻塞，而是采用循环的方式去尝试获取锁。好处：减少线程上下文切换的消耗，缺点：会耗CPU
+[代码](../../src/com/llh/advance/lock/SpinLockDemo.java)
 ## CAS引发的ABA问题
 ```java
 import java.util.concurrent.atomic.AtomicReference;
